@@ -92,22 +92,40 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
         .attr("stroke", "#69b3a2")
         .attr("stroke-width", 2);
 
-    function drawFullTimeLineSVG(data) {
+    function drawFullTimeLineSVG() {
+        const yearlySums = {};
 
-        xFull.domain(d3.extent(data, d => d.date));
-        yFull.domain([0, d3.max(data, d => d.value)]);
+        data.forEach(card => {
+            Object.keys(card)
+                .filter(k => k !== "Card Name")
+                .forEach(k => {
+                    const value = +card[k];
+                    if (value === -1) return;
+
+                    const date = parseDate(k);
+                    const year = date.getFullYear();
+
+                    yearlySums[year] = (yearlySums[year] || 0) + value;
+                });
+        });
+
+        const result = Object.entries(yearlySums).map(([year, total]) => ({
+            year: +year,
+            total
+        }));
+
+        xFull.domain(d3.extent(result, d => new Date(d.year, 0, 1)));
+        yFull.domain([0, d3.max(result, d => d.total)]);
 
         xAxisFull.call(d3.axisBottom(xFull));
         yAxisFull.call(d3.axisLeft(yFull));
 
         linePathFull
-            .datum(data)
+            .datum(result)
             .attr("d", d3.line()
-                .x(d => xFull(d.date))
-                .y(d => yFull(d.value))
+                .x(d => xFull(new Date(d.year, 0, 1)))
+                .y(d => yFull(d.total))
             );
     }
     drawFullTimeLineSVG();
-
-
 });
