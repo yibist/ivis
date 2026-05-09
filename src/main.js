@@ -15,7 +15,6 @@ const fullTimeLineSvg = d3.select("#fullTimeLineSvg")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-
 d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
 
     const parseDate = d3.timeParse("%Y-%m");
@@ -31,6 +30,7 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
     }));
 
     const cardNames = cards.map(d => d.name);
+
     // Dropdown
     d3.select("#cardSelect")
         .selectAll("option")
@@ -44,25 +44,56 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
         .x(d => x(d.date))
         .y(d => y(d.value));
 
-
     const x = d3.scaleTime().range([0, width]);
     const y = d3.scaleLinear().domain([-1, 3]).range([height, 0]);
+
     const xAxis = singleCardSvg.append("g")
         .attr("transform", `translate(0,${height})`);
+
     const yAxis = singleCardSvg.append("g")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y).tickValues([-1, 0, 1, 2, 3]));
+
+    singleCardSvg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -margin.left + 12)
+        .attr("text-anchor", "middle")
+        .text("Ban Status");
+
+    const gradient = singleCardSvg.append("linearGradient")
+        .attr("id", "line-gradient")
+        .attr("gradientUnits", "userSpaceOnUse");
+
+    gradient.selectAll("stop")
+        .data([
+            { offset: "0%", color: "blue" },
+            { offset: "100%", color: "red" }
+        ])
+        .enter()
+        .append("stop")
+        .attr("offset", d => d.offset)
+        .attr("stop-color", d => d.color);
+
     const linePath = singleCardSvg.append("path")
         .attr("fill", "none")
-        .attr("stroke", "#69b3a2")
-        .attr("stroke-width", 2);
-    function update(selectedCard) {
+        .attr("stroke", "url(#line-gradient)")
+        .attr("stroke-width", 3);
 
+    function update(selectedCard) {
         const card = cards.find(d => d.name === selectedCard);
         if (!card) return;
 
         x.domain(d3.extent(card.values, d => d.date));
-
         xAxis.call(d3.axisBottom(x));
+
+        const min = d3.min(card.values, d => d.value);
+        const max = d3.max(card.values, d => d.value);
+
+        gradient
+            .attr("x1", 0)
+            .attr("x2", 0)
+            .attr("y1", y(min))
+            .attr("y2", y(max));
 
         linePath
             .datum(card.values)
@@ -71,10 +102,8 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
             .attr("d", line);
     }
 
-    // Init
     update(cardNames[0]);
 
-    // Interaction
     d3.select("#cardSelect")
         .on("change", function () {
             update(this.value);
@@ -87,6 +116,15 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
     const xAxisFull = fullTimeLineSvg.append("g")
         .attr("transform", `translate(0,${height})`);
     const yAxisFull = fullTimeLineSvg.append("g")
+        .call(d3.axisLeft(yFull).tickValues([-1, 0, 1, 2, 3]));
+
+    fullTimeLineSvg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", -margin.left + 12)
+        .attr("text-anchor", "middle")
+        .text("Total Ban Value");
+
     const linePathFull = fullTimeLineSvg.append("path")
         .attr("fill", "none")
         .attr("stroke", "#69b3a2")
@@ -117,8 +155,9 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
         xFull.domain(d3.extent(result, d => new Date(d.year, 0, 1)));
         yFull.domain([0, d3.max(result, d => d.total)]);
 
-        xAxisFull.call(d3.axisBottom(xFull));
         yAxisFull.call(d3.axisLeft(yFull));
+
+        xAxisFull.call(d3.axisBottom(xFull));
 
         linePathFull
             .datum(result)
