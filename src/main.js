@@ -152,25 +152,26 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
         .attr("stroke-width", 2);
 
     function drawFullTimeLineSVG() {
-        const yearlySums = {};
+        const sums = {};
 
         data.forEach(card => {
             Object.keys(card)
                 .filter(k => k !== "Card Name")
                 .forEach(k => {
-                    const value = +card[k];
+                    let value = +card[k];
                     if (value === -1) return;
+                    value = 3 - value;
 
                     const date = parseDate(k);
-                    const year = date.getFullYear();
 
-                    yearlySums[year] = (yearlySums[year] || 0) + value;
+                    sums[k] = (sums[k] || 0) + value;
                 });
         });
-        const result = Object.entries(yearlySums).map(([year, total]) => (
+        console.log(sums)
+        const result = Object.entries(sums).map(([date, total]) => (
             {
-                year: +year,
-                total: (total / cardCountMapPerYear.get(year)) * 100
+                year: +date,
+                total: total / (cardCountMap.get(date)*3) * 100
             }));
 
         xFull.domain(d3.extent(result, d => new Date(d.year, 0, 1)));
