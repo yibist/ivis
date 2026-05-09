@@ -15,6 +15,27 @@ const fullTimeLineSvg = d3.select("#fullTimeLineSvg")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+
+const cardCountMap = new Map();
+const cardCountMapPerYear = new Map();
+
+d3.csv("src/resources/data/cardCount.csv").then(function (data) {
+
+    data.forEach(row => {
+        cardCountMap.set(row.Date, parseInt(row['Release Count']));
+
+        const year = row.Date.split('-')[0];
+        const releaseCount = parseInt(row['Release Count']);
+
+        // If year already exists in map, add to existing count
+        if (cardCountMapPerYear.has(year)) {
+            cardCountMapPerYear.set(year, cardCountMapPerYear.get(year) + releaseCount);
+        } else {
+            cardCountMapPerYear.set(year, releaseCount);
+        }
+    });
+});
+
 d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
 
     const parseDate = d3.timeParse("%Y-%m");
@@ -123,7 +144,7 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
         .attr("x", -height / 2)
         .attr("y", -margin.left + 12)
         .attr("text-anchor", "middle")
-        .text("Total Ban Value");
+        .text("% of cards Baned");
 
     const linePathFull = fullTimeLineSvg.append("path")
         .attr("fill", "none")
@@ -146,11 +167,11 @@ d3.csv("src/resources/data/banlist_1.csv").then(function (data) {
                     yearlySums[year] = (yearlySums[year] || 0) + value;
                 });
         });
-
-        const result = Object.entries(yearlySums).map(([year, total]) => ({
-            year: +year,
-            total
-        }));
+        const result = Object.entries(yearlySums).map(([year, total]) => (
+            {
+                year: +year,
+                total: (total / cardCountMapPerYear.get(year)) * 100
+            }));
 
         xFull.domain(d3.extent(result, d => new Date(d.year, 0, 1)));
         yFull.domain([0, d3.max(result, d => d.total)]);
